@@ -271,9 +271,9 @@ fx_module.graph.print_tabular()
 
 ```{.python .input}
 def map_param(param: nn.Parameter):
-    return relax.const(
-        param.data.cpu().numpy(), relax.TensorStructInfo(param.data.shape, "float32")
-    )
+    t = param.detach() if hasattr(param, "detach") else param
+    arr = t.cpu().numpy().astype("float32")
+    return relax.const(arr, "float32")
 
 def fetch_attr(fx_mod, target: str):
     """Helper function to fetch an attr"""
@@ -456,9 +456,10 @@ MLPModule.show()
 ```
 
 ```{.python .input}
-ex = relax.build(MLPModule, target="llvm")
+target = tvm.target.Target("llvm", host="llvm")
+ex = tvm.compile(MLPModule, target)
 vm = relax.VirtualMachine(ex, tvm.cpu())
-data_nd = tvm.nd.array(img.reshape(1, 784))
+data_nd = tvm.runtime.tensor(img.reshape(1, 784))
 
 nd_res = vm["main"](data_nd)
 
